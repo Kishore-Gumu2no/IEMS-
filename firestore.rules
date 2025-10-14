@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Define rules for the Firestore service
+service cloud.firestore {
+  // Match all documents in our specific database
+  match /databases/{database}/documents {
+
+    // --- Rules for the 'reports' collection ---
+    // The {reportId} is a wildcard that matches any document ID
+    match /reports/{reportId} {
+
+      // ALLOW READ: Any user who is signed in can read any report.
+      // This is necessary for the dashboard to function.
+      allow read: if request.auth != null;
+
+      // ALLOW CREATE: Any user who is signed in can create a new report.
+      allow create: if request.auth != null;
+
+      // DENY UPDATE/DELETE: No one can modify or delete a report from the client.
+      // This protects your data integrity.
+      allow update, delete: if false;
+    }
+
+    // --- Rules for the 'users' collection ---
+    // The {userId} wildcard matches any document ID in the users collection
+    match /users/{userId} {
+
+      // ALLOW READ (OWNER ONLY): A user can only read their own document.
+      // We verify this by matching the document's ID ({userId}) with the
+      // authenticated user's unique ID (request.auth.uid).
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // DENY ALL WRITES: No one can create, update, or delete a user document
+      // from the client. This prevents users from giving themselves points or badges.
+      // All modifications are handled securely by your backend trigger.
+      allow write: if false;
+    }
+  }
+}
+
