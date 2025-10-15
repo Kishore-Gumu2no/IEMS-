@@ -1,0 +1,7 @@
+ultralytics
+firebase-admin
+pandas
+xgboost
+numpy
+opencv-python
+scikit-learn
