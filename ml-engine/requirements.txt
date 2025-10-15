@@ -5,3 +5,5 @@ xgboost
 numpy
 opencv-python
 scikit-learn
+google-cloud-functions
+firebase-functions
