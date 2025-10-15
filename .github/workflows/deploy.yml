@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml (Final, Production-Ready Version)
+# .github/workflows/deploy.yml (Final, Corrected Version)
 
 name: Deploy Python Functions to Firebase
 
@@ -20,11 +20,11 @@ jobs:
           python-version: '3.11'
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Installs the C++ build tools AND the required graphics/image processing libraries for OpenCV and PyTorch.
-      - name: Install System Dependencies for ML/CV
+      # Installs the correct, modern system libraries required by OpenCV and PyTorch on Ubuntu 22.04+
+      - name: Install System Dependencies for Computer Vision
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev
+          sudo apt-get install -y libgl1 libglib2.0-0
       # =================================
 
       - name: Create venv and Install Python Dependencies
