@@ -1,0 +1,26 @@
+# .github/workflows/deploy.yml
+
+name: Deploy Python Functions to Firebase
+
+on:
+  push:
+    branches:
+      - main # Or whatever your main branch is called
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
+          PROJECT_ID: iems-plus
+        run: |
+          echo "${FIREBASE_SERVICE_ACCOUNT}" > ./service-account.json
+          firebase deploy --only functions:python-ml --project ${PROJECT_ID} --token "$(cat ./service-account.json)" --non-interactive
