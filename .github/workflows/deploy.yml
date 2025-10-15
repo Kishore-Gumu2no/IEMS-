@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml
+# .github/workflows/deploy.yml (Final Corrected Version)
 
 name: Deploy Python Functions to Firebase
 
@@ -14,20 +14,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # === NEW STEP: Install Python and Dependencies ===
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Python Dependencies
+        run: pip install -r functions-python/requirements.txt
+      # ===============================================
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
       - name: Deploy to Firebase
         env:
-          # This uses the secret you created in GitHub
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
           PROJECT_ID: iems-plus
         run: |
-          # Create the service account file from the secret
           echo "${FIREBASE_SERVICE_ACCOUNT}" > ./service-account.json
-
-          # Set the GOOGLE_APPLICATION_CREDENTIALS environment variable
           export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-          
-          # Deploy without the deprecated --token flag
           firebase deploy --only functions:python-ml --project ${PROJECT_ID} --non-interactive
