@@ -3,3 +3,10 @@
 firebase-admin
 google-cloud-functions
 # ... and all the other libraries from the ml-engine/requirements.txt file
+ultralytics
+firebase-admin
+pandas
+xgboost
+numpy
+opencv-python
+scikit-learn
