@@ -1,0 +1,5 @@
+
+# Contents of functions-python/requirements.txt
+firebase-admin
+google-cloud-functions
+# ... and all the other libraries from the ml-engine/requirements.txt file
