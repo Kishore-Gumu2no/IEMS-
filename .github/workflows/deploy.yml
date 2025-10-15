@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml (Final, Robust Version)
+# .github/workflows/deploy.yml (Final, Production-Ready Version)
 
 name: Deploy Python Functions to Firebase
 
@@ -19,11 +19,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      # === THIS IS THE CRITICAL FIX ===
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-      # ===============================
-      
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Installs the C++ build tools AND the required graphics/image processing libraries for OpenCV and PyTorch.
+      - name: Install System Dependencies for ML/CV
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev
+      # =================================
+
       - name: Create venv and Install Python Dependencies
         run: |
           python -m venv functions-python/venv
