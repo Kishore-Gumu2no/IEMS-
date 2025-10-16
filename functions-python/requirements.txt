@@ -1,4 +1,3 @@
-# functions-python/requirements.txt (Final Version)
 ultralytics
 firebase-admin
 pandas
@@ -6,4 +5,5 @@ xgboost
 numpy
 opencv-python
 scikit-learn
-firebase-functions
+Flask
+gunicorn

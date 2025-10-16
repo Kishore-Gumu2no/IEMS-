@@ -1,40 +1,48 @@
-import functions_framework
+import os
+from flask import Flask, request
 import firebase_admin
 from firebase_admin import firestore
-import json
+from predict_hotspots import predict # Assuming your ML function is here
 
-# Initialize Firebase only once in the global scope
+# Initialize Firebase only once
 try:
     firebase_admin.get_app()
 except ValueError:
     firebase_admin.initialize_app()
 
-@functions_framework.cloud_event
-def run_prediction(cloud_event):
-    """Triggered by a change to a Firestore document."""
-    
-    # === START: DEBUGGING PRINTS ===
-    print("--- Function Triggered Successfully ---")
-    
-    # The data payload is encoded in the cloud_event.data attribute
-    event_data = cloud_event.data
-    
-    # Print the raw event data to see its structure
-    print("Raw CloudEvent Data:")
-    print(json.dumps(event_data, indent=2))
-    
-    # Example of extracting the document ID
-    try:
-        resource_string = cloud_event["source"]
-        # The resource string is long, e.g., projects/your-project/databases/(default)/documents/test_reports/someId
-        doc_id = resource_string.split('/')[-1]
-        print(f"Firestore Document ID: {doc_id}")
-    except Exception as e:
-        print(f"Error extracting document ID: {e}")
-    
-    print("--- End of Debug Log ---")
-    # === END: DEBUGGING PRINTS ===
+app = Flask(__name__)
 
-    # You can add your ML logic and Firestore write-back logic here later.
+@app.route("/", methods=["POST"])
+def run_prediction():
+    """Receives event data from Eventarc trigger and runs the ML model."""
     
-    return "OK", 200
+    event_data = request.get_json()
+    print("--- Event Received ---")
+    print(event_data)
+
+    try:
+        # Extract the new document data from the Firestore event payload
+        doc_data = event_data["value"]["fields"]
+        report_id = event_data["document"].split('/')[-1]
+        
+        print(f"Processing document ID: {report_id}")
+
+        # --- YOUR ML LOGIC GOES HERE ---
+        # prediction_result = predict(doc_data)
+        prediction_result = "ML model output would go here" # Placeholder
+        # -----------------------------
+
+        # Write the prediction back to Firestore
+        doc_ref = firestore.client().collection("test_reports").document(report_id)
+        doc_ref.update({"predicted_neglect": prediction_result})
+        
+        print(f"Successfully wrote prediction for document: {report_id}")
+        return "OK", 200
+
+    except Exception as e:
+        print(f"ERROR processing event: {e}")
+        return f"Error: {e}", 500
+
+if __name__ == "__main__":
+    # This is what Cloud Run uses to start the server
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

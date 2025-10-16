@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install system dependencies for OpenCV, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 libsm6 libxext6 \
+    libgl1 libglib2.0-0 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file and install dependencies
@@ -16,5 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
-# Run the function framework (this listens automatically on $PORT)
-CMD exec functions-framework --target=run_prediction
+# Expose the port the container will listen on
+EXPOSE 8080
+
+# Run the production web server
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
