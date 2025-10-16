@@ -1,6 +1,6 @@
 # .github/workflows/deploy.yml
 
-name: Build and Deploy Docker-based Cloud Function
+name: Build and Deploy Docker-based Cloud Function (from functions-python)
 
 on:
   push:
@@ -38,7 +38,8 @@ jobs:
             --location=us-central1 \
             --description="Docker repo for IEMS project" || true
 
-          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-py
+          # 👇 Build from functions-python instead of functions-py
+          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-python
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       - name: Deploy Cloud Function (Docker-based)
