@@ -17,7 +17,8 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: iems-plus
-          service_account_key: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # FIX #1: Corrected the secret name to match what we created.
+          service_account_key: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
           export_default_credentials: true
 
       - name: Configure Docker Authentication
@@ -31,7 +32,8 @@ jobs:
             --location=us-central1 \
             --description="Container repository for IEMS ML engine" || echo "Repository already exists."
 
-          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-python
+          # FIX #2: Changed build context from './functions-python' to '.' to find the Dockerfile.
+          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       - name: Deploy to Cloud Run
