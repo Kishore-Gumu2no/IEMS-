@@ -34,16 +34,14 @@ jobs:
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys the function using the single, correct --trigger-resource flag.
+      # Deploys the function using the correct --image flag and removes unnecessary flags like --source and --runtime.
       - name: Deploy Cloud Function from Image
         run: |-
           gcloud functions deploy run_prediction \
             --gen2 \
             --region=us-central1 \
-            --runtime=python311 \
-            --source=. \
-            --entry-point=run_prediction \
             --trigger-event=google.cloud.firestore.document.v1.written \
             --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
-            --docker-image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+            --entry-point=run_prediction \
+            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
       # ===============================
