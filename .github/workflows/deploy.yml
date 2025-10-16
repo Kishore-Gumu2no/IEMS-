@@ -1,4 +1,6 @@
-name: Deploy ML Engine to Cloud Run
+# .github/workflows/deploy.yml (Final, Corrected Docker Version)
+
+name: Build and Deploy Docker Image to Firebase
 
 on:
   push:
@@ -8,39 +10,38 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: iems-plus
-          # FIX #1: Corrected the secret name to match what we created.
-          service_account_key: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
-          export_default_credentials: true
+        uses: 'google-github-actions/setup-gcloud@v2'
 
-      - name: Configure Docker Authentication
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Replaces the faulty auth action with a direct, manual service account activation.
+      - name: Authenticate to Google Cloud
+        run: |
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}" > ./gcloud-key.json
+          gcloud auth activate-service-account --key-file=./gcloud-key.json
+          gcloud config set project iems-plus
+      # ==================================
 
       - name: Build and Push Docker Image
-        run: |
-          echo "Building and pushing Docker image..."
-          gcloud artifacts repositories create iems-plus-repo \
-            --repository-format=docker \
-            --location=us-central1 \
-            --description="Container repository for IEMS ML engine" || echo "Repository already exists."
-
-          # FIX #2: Changed build context from './functions-python' to '.' to find the Dockerfile.
+        run: |-
+          gcloud artifacts repositories create iems-plus-repo --repository-format=docker --location=us-central1 --description="Docker repository for IEMS" || true
+          gcloud auth configure-docker us-central1-docker.pkg.dev -q
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
-      - name: Deploy to Cloud Run
-        run: |
-          echo "Deploying container to Cloud Run..."
-          gcloud run deploy ml-engine \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
+      - name: Deploy Cloud Function from Image
+        run: |-
+          gcloud functions deploy run_prediction \
+            --gen2 \
             --region=us-central1 \
-            --platform=managed \
-            --allow-unauthenticated
+            --trigger-event=google.cloud.firestore.document.v1.written \
+            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
+            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
