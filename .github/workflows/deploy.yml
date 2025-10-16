@@ -1,6 +1,6 @@
-# .github/workflows/deploy.yml (Final Corrected Version)
+# .github/workflows/deploy.yml (Final, Correct Non-Docker Version)
 
-name: Build and Deploy Docker Image to Firebase
+name: Deploy Python Functions to Firebase
 
 on:
   push:
@@ -10,38 +10,40 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Authenticate to Google Cloud
-        uses: 'google-github-actions/auth@v2'
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}'
+          python-version: '3.11'
 
-      - name: Set up Google Cloud SDK
-        uses: 'google-github-actions/setup-gcloud@v2'
+      # The key fix: Installs the system libraries needed for your ML packages.
+      - name: Install System Dependencies for Computer Vision
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgl1 libglib2.0-0
 
-      - name: Build and Push Docker Image
-        run: |-
-          gcloud artifacts repositories create iems-plus-repo --repository-format=docker --location=us-central1 --description="Docker repository for IEMS" || true
-          gcloud auth configure-docker us-central1-docker.pkg.dev -q
-          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
-          docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+      # Correctly creates the venv and installs your Python libraries into it.
+      - name: Create venv and Install Python Dependencies
+        run: |
+          python -m venv functions-python/venv
+          source functions-python/venv/bin/activate && pip install -r functions-python/requirements.txt
 
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys the function using the correct --image flag and removes unnecessary flags like --source and --runtime.
-      - name: Deploy Cloud Function from Image
-        run: |-
-          gcloud functions deploy run_prediction \
-            --gen2 \
-            --region=us-central1 \
-            --trigger-event=google.cloud.firestore.document.v1.written \
-            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
-            --entry-point=run_prediction \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-      # ===============================
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
+          PROJECT_ID: iems-plus
+        run: |
+          echo "${FIREBASE_SERVICE_ACCOUNT}" > ./service-account.json
+          export GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
+          firebase deploy --only functions:python-ml --project ${PROJECT_ID} --non-interactive
