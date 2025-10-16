@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies for OpenCV, etc.
+# Install system dependencies for OpenCV and other ML libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -19,5 +19,5 @@ COPY . .
 # Expose the port the container will listen on
 EXPOSE 8080
 
-# Run the production web server
+# Run the production web server. This is the command that starts your main.py.
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app

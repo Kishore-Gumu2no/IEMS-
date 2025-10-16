@@ -1,4 +1,4 @@
-name: Deploy Cloud Function (Docker)
+name: Deploy ML Engine to Cloud Run
 
 on:
   push:
@@ -13,40 +13,41 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      # === FIX #1: Correct Secret Name ===
-      # This points to the correct GitHub secret you created.
       - name: Authenticate to Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}'
-      # ==================================
 
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
 
       - name: Enable required APIs
-        run: gcloud services enable artifactregistry.googleapis.com cloudfunctions.googleapis.com run.googleapis.com eventarc.googleapis.com
+        run: gcloud services enable artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com cloudbuild.googleapis.com
 
-      - name: Configure Docker authentication
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-python
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
-      # === FIX #2: Correct Deployment Command ===
-      # This removes the contradictory flags (--runtime, --entry-point) and uses only the --image flag.
-      - name: Deploy Cloud Function
+      - name: Deploy to Cloud Run and Set Firestore Trigger
         run: |
-          gcloud functions deploy run_prediction \
-            --gen2 \
+          gcloud run deploy ml-engine \
+            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
             --region=asia-south1 \
-            --trigger-event-filters="type=google.cloud.firestore.document.v1.written" \
-            --trigger-event-filters="database=(default)" \
-            --trigger-event-filters="document=test_reports/{reportId}" \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-      # ========================================
+            --platform=managed \
+            --no-allow-unauthenticated \
+            --set-env-vars=GOOGLE_CLOUD_PROJECT=iems-plus
+
+          # This command creates the bridge from Firestore to your running service
+          gcloud eventarc triggers create iems-firestore-trigger \
+            --destination-run-service=ml-engine \
+            --destination-run-region=asia-south1 \
+            --location=asia-south1 \
+            --event-filters="type=google.cloud.firestore.document.v1.written" \
+            --event-filters="database=(default)" \
+            --event-filters-path-pattern="test_reports/{reportId}" \
+            --service-account=${{ secrets.SERVICE_ACCOUNT_EMAIL }} || echo "Trigger setup command finished (it may already exist)."
