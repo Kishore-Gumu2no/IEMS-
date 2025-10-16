@@ -1,5 +1,4 @@
 # .github/workflows/deploy.yml
-
 name: Build and Deploy Docker Image to Firebase
 
 on:
@@ -26,21 +25,36 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
 
-      - name: Update Google Cloud SDK
-        run: gcloud components update --quiet
+      - name: Update Google Cloud SDK and print version
+        # This ensures the runner's gcloud is new enough to support --docker-image for gen2.
+        run: |
+          gcloud components update --quiet || true
+          gcloud --version
+          gcloud components list
 
       - name: Build and Push Docker Image
         run: |-
+          # create repo if not exists (ignore error)
           gcloud artifacts repositories create iems-plus-repo --repository-format=docker --location=us-central1 --description="Docker repository for IEMS" || true
           gcloud auth configure-docker us-central1-docker.pkg.dev -q
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       - name: Deploy Cloud Function from Docker Image
-        run: |-
+        env:
+          PROJECT_ID: iems-plus
+          REGION: us-central1
+          IMAGE: us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+        run: |
+          # Debugging output
+          echo "gcloud version:"
+          gcloud --version
+
+          # Deploy Gen2 function using docker image and event filters
           gcloud functions deploy run_prediction \
             --gen2 \
-            --region=us-central1 \
-            --docker-image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
-            --trigger-event=google.cloud.firestore.document.v1.created \
-            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}"
+            --region="$REGION" \
+            --docker-image="$IMAGE" \
+            --trigger-event-filters="type=google.cloud.firestore.document.v1.created" \
+            --trigger-event-filters="resource=projects/$PROJECT_ID/databases/(default)/documents/test_reports/{reportId}" \
+            --project="$PROJECT_ID"
