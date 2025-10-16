@@ -1,9 +1,9 @@
+# functions-python/requirements.txt (Final Version)
 ultralytics
 firebase-admin
 pandas
 xgboost
 numpy
-opencv-python-headless
+opencv-python
 scikit-learn
-google-cloud-functions
 firebase-functions
