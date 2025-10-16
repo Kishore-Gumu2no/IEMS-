@@ -18,10 +18,6 @@ def run_prediction():
     
     print("--- Event Received by Cloud Run ---")
     
-    # Eventarc sends the event payload in the request body
-    event_data = request.get_json()
-    print(event_data)
-
     try:
         # For Firestore events, the document ID is in the 'ce-subject' header
         resource_string = request.headers.get("ce-subject")
@@ -33,8 +29,9 @@ def run_prediction():
         print(f"Processing document ID: {report_id}")
 
         # --- YOUR ML LOGIC GOES HERE ---
-        # prediction_result = predict(event_data) # Pass necessary data to your model
-        prediction_result = "Prediction successful" # Placeholder
+        # event_data = request.get_json(force=True) # Use this to get the data if needed
+        # prediction_result = predict(event_data) 
+        prediction_result = "Prediction successful - End to End Test Passed" # Placeholder
         # -----------------------------
 
         # Write the prediction back to the same Firestore document
