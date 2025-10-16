@@ -1,6 +1,6 @@
-# .github/workflows/deploy.yml (Final, Correct Version)
+# .github/workflows/deploy.yml (Final, Corrected Docker Version)
 
-name: Build and Deploy Python Function to Firebase
+name: Build and Deploy Docker Image to Firebase
 
 on:
   push:
@@ -26,6 +26,12 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
 
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Forces the gcloud tool to update itself to the latest version.
+      - name: Update Google Cloud SDK
+        run: gcloud components update --quiet
+      # ==================================
+
       - name: Build and Push Docker Image
         run: |-
           gcloud artifacts repositories create iems-plus-repo --repository-format=docker --location=us-central1 --description="Docker repository for IEMS" || true
@@ -33,8 +39,6 @@ jobs:
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys as a Cloud Function (event-driven) instead of Cloud Run (web service).
       - name: Deploy Cloud Function from Image
         run: |-
           gcloud functions deploy run_prediction \
@@ -44,4 +48,3 @@ jobs:
             --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
             --entry-point=run_prediction \
             --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-      # ==================================
