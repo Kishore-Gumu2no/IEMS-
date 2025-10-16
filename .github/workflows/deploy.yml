@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml (Final, Corrected Docker Version)
+# .github/workflows/deploy.yml
 
 name: Build and Deploy Docker Image to Firebase
 
@@ -36,14 +36,11 @@ jobs:
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys the function by removing the conflicting --entry-point flag.
-      - name: Deploy Cloud Function from Image
+      - name: Deploy Cloud Function from Docker Image
         run: |-
           gcloud functions deploy run_prediction \
             --gen2 \
             --region=us-central1 \
-            --trigger-event=google.cloud.firestore.document.v1.written \
-            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-      # ==================================
+            --docker-image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
+            --trigger-event=google.cloud.firestore.document.v1.created \
+            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}"
