@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yml (Final Corrected Version)
+# .github/workflows/deploy.yml (Final, Corrected Docker Version)
 
 name: Build and Deploy Docker Image to Firebase
 
@@ -26,11 +26,8 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
 
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Forces the gcloud tool to update itself to the latest version.
       - name: Update Google Cloud SDK
         run: gcloud components update --quiet
-      # ==================================
 
       - name: Build and Push Docker Image
         run: |-
@@ -39,6 +36,8 @@ jobs:
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Deploys the function by removing the conflicting --entry-point flag.
       - name: Deploy Cloud Function from Image
         run: |-
           gcloud functions deploy run_prediction \
@@ -46,5 +45,5 @@ jobs:
             --region=us-central1 \
             --trigger-event=google.cloud.firestore.document.v1.written \
             --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
-            --entry-point=run_prediction \
             --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+      # ==================================
