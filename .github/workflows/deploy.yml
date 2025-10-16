@@ -1,6 +1,6 @@
 # .github/workflows/deploy.yml (Final, Correct Version)
 
-name: Deploy ML Engine to Firebase
+name: Build and Deploy Python Function
 
 on:
   push:
@@ -15,8 +15,8 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Authenticate to Google Cloud
         uses: 'google-github-actions/auth@v2'
@@ -34,22 +34,14 @@ jobs:
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys to Cloud Run (the correct service for Docker) and creates the Firestore trigger.
-      - name: Deploy to Cloud Run and Set Firestore Trigger
+      # Deploys as a Cloud Function (the correct service) from the pre-built Docker image.
+      - name: Deploy Cloud Function from Image
         run: |-
-          gcloud run deploy ml-engine \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
+          gcloud functions deploy run_prediction \
+            --gen2 \
             --region=us-central1 \
-            --platform=managed \
-            --no-allow-unauthenticated \
-            --set-env-vars=GOOGLE_CLOUD_PROJECT=iems-plus
-          
-          gcloud eventarc triggers create iems-firestore-trigger \
-            --destination-run-service=ml-engine \
-            --destination-run-region=us-central1 \
-            --location=us-central1 \
-            --event-filters="type=google.cloud.firestore.document.v1.written" \
-            --event-filters="database=(default)" \
-            --event-filters-path-pattern="test_reports/{reportId}" \
-            --service-account=${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-      # =================================
+            --trigger-event=google.cloud.firestore.document.v1.written \
+            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
+            --entry-point=run_prediction \
+            --docker-image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+      # ==================================
