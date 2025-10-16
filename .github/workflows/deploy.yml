@@ -16,12 +16,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Uses the correct secret name that you created in your GitHub settings.
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: iems-plus
           service_account_key: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}
           export_default_credentials: true
+      # ==================================
 
       - name: Enable required APIs
         run: |
@@ -30,11 +33,7 @@ jobs:
       - name: Build and push Docker image
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-          
-          # This command builds using the 'functions-python' directory, which now contains the Dockerfile
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-python
-          
-          # This command correctly pushes the image
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
 
       - name: Deploy Cloud Function
