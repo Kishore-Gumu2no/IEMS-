@@ -20,5 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your function's code
 COPY functions-python/ .
 
-# This command is used by Cloud Run to start the server
-CMD exec functions-framework --target=run_prediction --port=8080
+# === THIS IS THE CRITICAL FIX ===
+# Starts the web server that Cloud Run expects, listening on the correct port.
+CMD exec functions-framework --target=run_prediction --port=${PORT:-8080}
+# =================================
