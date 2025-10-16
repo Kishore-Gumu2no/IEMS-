@@ -27,14 +27,14 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys the function using the correct --trigger-event-filters flags as instructed by the error log.
+      # Points the deployment command to the correct source code directory where main.py is located.
       - name: Deploy Cloud Function
         run: |-
           gcloud functions deploy run_prediction \
             --gen2 \
             --region=us-central1 \
             --runtime=python311 \
-            --source=. \
+            --source=./functions-python \
             --entry-point=run_prediction \
             --trigger-event-filters="type=google.cloud.firestore.document.v1.written" \
             --trigger-event-filters="database=(default)" \
