@@ -1,6 +1,6 @@
 # .github/workflows/deploy.yml (Final, Correct Version)
 
-name: Deploy ML Engine to Cloud Run
+name: Build and Deploy Python Function to Firebase
 
 on:
   push:
@@ -15,16 +15,13 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Uses the official, robust Google authentication method that will not corrupt the secret key.
       - name: Authenticate to Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}'
-      # ==================================
 
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
@@ -35,11 +32,16 @@ jobs:
           gcloud auth configure-docker us-central1-docker.pkg.dev -q
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-      
-      - name: Deploy to Cloud Run
+
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Deploys as a Cloud Function (event-driven) instead of Cloud Run (web service).
+      - name: Deploy Cloud Function from Image
         run: |-
-          gcloud run deploy ml-engine \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
+          gcloud functions deploy run_prediction \
+            --gen2 \
             --region=us-central1 \
-            --platform=managed \
-            --allow-unauthenticated
+            --trigger-event=google.cloud.firestore.document.v1.written \
+            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
+            --entry-point=run_prediction \
+            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+      # ==================================
