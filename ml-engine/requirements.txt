@@ -3,5 +3,8 @@ firebase-admin
 pandas
 xgboost
 numpy
-opencv-python-headless
+opencv-python
 scikit-learn
+google-cloud-functions
+firebase-functions
+functions-framework

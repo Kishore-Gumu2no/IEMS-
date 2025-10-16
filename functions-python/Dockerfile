@@ -1,23 +1,20 @@
-# .github/workflows/Dockerfile (Final Version)
-
-# Use a specific, stable Python version as the base
+# Use official Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# The key fix: Install all system-level dependencies for C++ compilation and headless computer vision
+# Install system dependencies for OpenCV, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libgl1 \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    libgl1 libglib2.0-0 libsm6 libxext6 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy ONLY the requirements file first to leverage Docker layer caching
-COPY functions-python/requirements.txt .
-
-# Install Python dependencies
+# Copy requirements file and install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your function's code
-COPY functions-python/ .
+# Copy the rest of the application code
+COPY . .
+
+# Run the function framework (this listens automatically on $PORT)
+CMD exec functions-framework --target=run_prediction

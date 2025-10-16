@@ -1,42 +1,40 @@
-# main.py (Final Corrected Version)
-
-# NO firebase_admin import here is needed for initialization
+import functions_framework
+import firebase_admin
 from firebase_admin import firestore
-from firebase_functions import firestore_fn
+import json
 
-# This imports the real prediction function
-from predict_hotspots import predict
+# Initialize Firebase only once in the global scope
+try:
+    firebase_admin.get_app()
+except ValueError:
+    firebase_admin.initialize_app()
 
-# DO NOT CALL firebase_admin.initialize_app() HERE. The environment does it for you.
-
-@firestore_fn.on_document_created("test_reports/{reportId}")
-def run_prediction(event: firestore_fn.Event[firestore_fn.Change]) -> None:
-    """
-    Triggered when a new report is created in the 'test_reports' collection.
-    This function runs the prediction and writes the result back to the document.
-    """
+@functions_framework.cloud_event
+def run_prediction(cloud_event):
+    """Triggered by a change to a Firestore document."""
     
-    report_id = event.params["reportId"]
-    print(f"Function triggered for report ID: {report_id}")
+    # === START: DEBUGGING PRINTS ===
+    print("--- Function Triggered Successfully ---")
+    
+    # The data payload is encoded in the cloud_event.data attribute
+    event_data = cloud_event.data
+    
+    # Print the raw event data to see its structure
+    print("Raw CloudEvent Data:")
+    print(json.dumps(event_data, indent=2))
+    
+    # Example of extracting the document ID
+    try:
+        resource_string = cloud_event["source"]
+        # The resource string is long, e.g., projects/your-project/databases/(default)/documents/test_reports/someId
+        doc_id = resource_string.split('/')[-1]
+        print(f"Firestore Document ID: {doc_id}")
+    except Exception as e:
+        print(f"Error extracting document ID: {e}")
+    
+    print("--- End of Debug Log ---")
+    # === END: DEBUGGING PRINTS ===
 
-    report_data = event.data.to_dict()
-
-    if report_data is None:
-        print(f"No data in document {report_id}. Exiting.")
-        return
-
-    print("Running neglect prediction model...")
+    # You can add your ML logic and Firestore write-back logic here later.
     
-    # This calls the actual ML model
-    prediction_result = predict(report_data)
-    
-    print(f"Prediction result: {prediction_result}")
-    
-    # Get a reference to the document and write the real prediction back into it.
-    # The client is automatically available in this environment.
-    doc_ref = firestore.client().collection("test_reports").document(report_id)
-    doc_ref.update({
-        "predicted_neglect": prediction_result
-    })
-    
-    print(f"Successfully wrote prediction back to Firestore document {report_id}.")
+    return "OK", 200
