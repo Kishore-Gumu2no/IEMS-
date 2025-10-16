@@ -27,12 +27,12 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Points the deployment command to the correct source code directory where main.py is located.
+      # Deploys the function to the correct region (asia-south1) to match the Firestore database.
       - name: Deploy Cloud Function
         run: |-
           gcloud functions deploy run_prediction \
             --gen2 \
-            --region=us-central1 \
+            --region=asia-south1 \
             --runtime=python311 \
             --source=./functions-python \
             --entry-point=run_prediction \
