@@ -27,7 +27,7 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v2'
 
       # === THIS IS THE DEFINITIVE FIX ===
-      # Deploys the function from source, allowing Google Cloud Build to automatically use the Dockerfile.
+      # Deploys the function using the correct --trigger-event-filters flags as instructed by the error log.
       - name: Deploy Cloud Function
         run: |-
           gcloud functions deploy run_prediction \
@@ -36,6 +36,7 @@ jobs:
             --runtime=python311 \
             --source=. \
             --entry-point=run_prediction \
-            --trigger-event=google.cloud.firestore.document.v1.written \
-            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}"
+            --trigger-event-filters="type=google.cloud.firestore.document.v1.written" \
+            --trigger-event-filters="database=(default)" \
+            --trigger-event-filters="document=test_reports/{reportId}"
       # ==================================
