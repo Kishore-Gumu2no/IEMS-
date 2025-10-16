@@ -1,6 +1,6 @@
 # .github/workflows/deploy.yml
 
-name: Deploy Gen2 Cloud Function from Source
+name: Build and Deploy Docker-based Cloud Function
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Authenticate to Google Cloud
@@ -28,27 +28,28 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Print gcloud version (debug)
-        run: |
-          gcloud --version
-          gcloud components list || true
+      - name: Configure Docker authentication
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev -q
 
-      - name: Deploy Cloud Function (Gen2) from source
-        env:
-          PROJECT_ID: iems-plus
-          REGION: us-central1
+      - name: Build and Push Docker Image
         run: |
-          echo "Deploying run_prediction function from source..."
-          
-          # Adjust --source if your function code is in a subfolder
+          gcloud artifacts repositories create iems-plus-repo \
+            --repository-format=docker \
+            --location=us-central1 \
+            --description="Docker repo for IEMS project" || true
+
+          docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest ./functions-py
+          docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+
+      - name: Deploy Cloud Function (Docker-based)
+        run: |
+          echo "Deploying Cloud Function using Docker image..."
           gcloud functions deploy run_prediction \
             --gen2 \
-            --region="$REGION" \
+            --region=us-central1 \
             --runtime=python311 \
-            --source=. \
-            --entry-point=run_prediction \
             --trigger-event-filters="type=google.cloud.firestore.document.v1.created" \
-            --trigger-event-filters="resource=projects/$PROJECT_ID/databases/(default)/documents/test_reports/{reportId}" \
-            --project="$PROJECT_ID" \
+            --trigger-event-filters="resource=projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
+            --docker-image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
             --memory=2048Mi \
             --timeout=540s

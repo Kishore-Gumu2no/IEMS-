@@ -1,9 +1,9 @@
-# functions-python/requirements.txt (Cleaned)
-firebase-admin
-google-cloud-functions
 ultralytics
+firebase-admin
 pandas
 xgboost
 numpy
-opencv-python
+opencv-python-headless
 scikit-learn
+google-cloud-functions
+firebase-functions
