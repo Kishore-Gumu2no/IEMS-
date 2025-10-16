@@ -1,6 +1,6 @@
-# .github/workflows/deploy.yml (Final, Corrected Docker Version)
+# .github/workflows/deploy.yml (Final, Correct Version)
 
-name: Build and Deploy Docker Image to Firebase
+name: Deploy ML Engine to Cloud Run
 
 on:
   push:
@@ -15,20 +15,19 @@ jobs:
       id-token: 'write'
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # === THIS IS THE DEFINITIVE FIX ===
+      # Uses the official, robust Google authentication method that will not corrupt the secret key.
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}'
+      # ==================================
 
       - name: Set up Google Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
-
-      # === THIS IS THE DEFINITIVE FIX ===
-      # Replaces the faulty auth action with a direct, manual service account activation.
-      - name: Authenticate to Google Cloud
-        run: |
-          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_IEMS_PLUS }}" > ./gcloud-key.json
-          gcloud auth activate-service-account --key-file=./gcloud-key.json
-          gcloud config set project iems-plus
-      # ==================================
 
       - name: Build and Push Docker Image
         run: |-
@@ -36,12 +35,11 @@ jobs:
           gcloud auth configure-docker us-central1-docker.pkg.dev -q
           docker build -t us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest .
           docker push us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
-
-      - name: Deploy Cloud Function from Image
+      
+      - name: Deploy to Cloud Run
         run: |-
-          gcloud functions deploy run_prediction \
-            --gen2 \
+          gcloud run deploy ml-engine \
+            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest \
             --region=us-central1 \
-            --trigger-event=google.cloud.firestore.document.v1.written \
-            --trigger-resource="projects/iems-plus/databases/(default)/documents/test_reports/{reportId}" \
-            --image=us-central1-docker.pkg.dev/iems-plus/iems-plus-repo/ml-engine:latest
+            --platform=managed \
+            --allow-unauthenticated
