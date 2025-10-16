@@ -15,7 +15,7 @@ app = Flask(__name__)
 @app.route("/", methods=["POST"])
 def run_prediction():
     """Receives event data from Eventarc trigger and runs the ML model."""
-    
+
     event_data = request.get_json()
     print("--- Event Received ---")
     print(event_data)
@@ -24,7 +24,7 @@ def run_prediction():
         # Extract the new document data from the Firestore event payload
         doc_data = event_data["value"]["fields"]
         report_id = event_data["document"].split('/')[-1]
-        
+
         print(f"Processing document ID: {report_id}")
 
         # --- YOUR ML LOGIC GOES HERE ---
@@ -35,7 +35,7 @@ def run_prediction():
         # Write the prediction back to Firestore
         doc_ref = firestore.client().collection("test_reports").document(report_id)
         doc_ref.update({"predicted_neglect": prediction_result})
-        
+
         print(f"Successfully wrote prediction for document: {report_id}")
         return "OK", 200
 
